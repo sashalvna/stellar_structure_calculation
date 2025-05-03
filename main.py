@@ -240,10 +240,9 @@ if __name__ == "__main__":
 
     #Run optimization to find best initial parameters
     print("Running optimizer to find best initial parameters")
-    #sol = optimize.root(newt, initial_guess, args=(M_r, M, X, Y, Z, xf, n_steps), tol=1e-3)
-    #print(sol)
-    #final_solution = sol.x
-    final_solution = np.array([1.72422256e+33, 1.19114608e+17, 9.12182509e+10, 1.25068403e+07])
+    sol = optimize.root(newt, initial_guess, args=(M_r, M, X, Y, Z, xf, n_steps), tol=1e-3)
+    print(sol)
+    final_solution = sol.x
     print("Final solution: L=", final_solution[0]/const.Ls, "L_sun, P_c=", final_solution[1], "dyn/cm^2, R=", final_solution[2]/const.Rs, "R_sun, T_c=", final_solution[3], "K")
 
     #Run the stellar structure calculation with the best (final) initial parameters
