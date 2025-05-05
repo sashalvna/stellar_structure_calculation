@@ -11,6 +11,7 @@ from zams_opacity import *
 from zams_eos import *
 from zams_energygeneration import *
 from zams_initialboundaries import *
+from params import *
 import constants as const
 
 #Plot setttings
@@ -20,6 +21,17 @@ plt.rc('font', family='serif', weight='bold')
 plt.rc('text', usetex=True)
 matplotlib.rcParams['font.weight']= 'bold'
 matplotlib.rcParams.update({'font.weight': 'bold'})
+
+"""
+Creates a ZAMS stellar structure model of a star with parameters given in params.py. The model integrates the four coupled ODEs of stellar structure
+in the function derivs from a point very close to the center of the star outwards to a central point, and inward from the surface (photosphere) of the star
+to the same central point. 
+
+The function newt optimizes the initial guess for the boundary parameters L, R, P_c, and T_c until a converging model is found. The output for the
+stellar structure parameters are plotted, with comparisons to the initial guess and a MESA model of a star with the same mass and composition.
+A machine-readable table of model parameters for the converged model is saved to stellar_structure_calculation_result.csv
+
+"""
 
 def derivs(m, x, X, Y, Z):
     #Four coupled ODEs of stellar structure at a given mass, structure parameters, and composition
@@ -145,20 +157,43 @@ def mesa_plotter(mesapath, mesafile, ylabels, calc=[], showplot=False):
             continue
 
         #Plot both MESA and converged model
+
         if len(calc) > 0:
             if i==0:
                 ax.plot(calc[0].t/const.Ms, calc[0].y[i+1], lw=3,c='tab:blue', label=r'Converged model')
                 ax.plot(calc[1].t/const.Ms, calc[1].y[i+1], lw=3, c='tab:blue')
                 ax.plot(mesa_profile.mass, mesa_profile.P, lw=3, c='tab:green', label=r'MESA')
+                #plot percentiles 10% and 25% of MESA model
+                mesa_lower_10 = mesa_profile.P - 0.1*mesa_profile.P
+                mesa_upper_10 = mesa_profile.P + 0.1*mesa_profile.P
+                ax.fill_between(mesa_profile.mass, mesa_lower_10, mesa_upper_10, alpha=0.2,color='tab:green',zorder=0)
+                mesa_lower_25 = mesa_profile.P - 0.25*mesa_profile.P
+                mesa_upper_25 = mesa_profile.P + 0.25*mesa_profile.P
+                ax.fill_between(mesa_profile.mass, mesa_lower_25, mesa_upper_25, alpha=0.14,color='tab:green',zorder=0)
             elif i==1:
                 ax.plot(calc[0].t/const.Ms, calc[0].y[i+1]/const.Rs, lw=3,c='tab:blue')
                 ax.plot(calc[1].t/const.Ms, calc[1].y[i+1]/const.Rs, lw=3, c='tab:blue')
                 ax.plot(mesa_profile.mass, mesa_profile.R, lw=3, c='tab:green')
+                #plot percentiles 10% and 25% of MESA model
+                mesa_lower_10 = mesa_profile.R - 0.1*mesa_profile.R
+                mesa_upper_10 = mesa_profile.R + 0.1*mesa_profile.R
+                ax.fill_between(mesa_profile.mass, mesa_lower_10, mesa_upper_10, alpha=0.2,color='tab:green',zorder=0)
+                mesa_lower_25 = mesa_profile.R - 0.25*mesa_profile.R
+                mesa_upper_25 = mesa_profile.R + 0.25*mesa_profile.R
+                ax.fill_between(mesa_profile.mass, mesa_lower_25, mesa_upper_25, alpha=0.14,color='tab:green',zorder=0)
             elif i==2:
                 ax.plot(calc[0].t/const.Ms, calc[0].y[i+1], lw=3,c='tab:blue')
                 ax.plot(calc[1].t/const.Ms, calc[1].y[i+1], lw=3, c='tab:blue')
                 ax.plot(mesa_profile.mass, mesa_profile.T, lw=3, c='tab:green')
+                #plot percentiles 10% and 25% of MESA model
+                mesa_lower_10 = mesa_profile.T - 0.1*mesa_profile.T
+                mesa_upper_10 = mesa_profile.T + 0.1*mesa_profile.T
+                ax.fill_between(mesa_profile.mass, mesa_lower_10, mesa_upper_10, alpha=0.2,color='tab:green',zorder=0)
+                mesa_lower_25 = mesa_profile.T - 0.25*mesa_profile.T
+                mesa_upper_25 = mesa_profile.T + 0.25*mesa_profile.T
+                ax.fill_between(mesa_profile.mass, mesa_lower_25, mesa_upper_25, alpha=0.14,color='tab:green',zorder=0)
             ax.set_xlim(0, max(calc[1].t/const.Ms))
+
         #Plot just the MESA result
         else:
             if i==0:
@@ -212,34 +247,14 @@ def write_tocsv(outward_result, inward_result, X, Y, Z, show_table=False):
 
 if __name__ == "__main__":
 
-    #Set up initial parameters - mass and composition
-    M_Msun = 1.0 #mass of star in M_sun
+    #Set up initial parameters and things for plotting (parameters read in from params.py)
     M = M_Msun * const.Ms #mass of star in g
-    X = 0.7 #H mass fraction
-    Y = 0.28 #He mass fraction
-    Z = 0.02 #metallicity
-
-    #Inner boundary guess
-    M_r = 1e-10 #very small nonzero mass
-    P_c = 2.5e17 #solar central density
-    T_c = 1.5e7 #solar central temperature
-    #Outer boundary guess
-    R = 1*const.Rs
-    L = 1*const.Ls
-    #Central point to integrate to
-    xf = 0.5*M #just make it halfway
-    n_steps = 1000
-
+    ylabels = [r'$L/L_\odot$', r'$P$ (dyn/cm$^2$)', r'$R/R_\odot$', r'$T$ (K)']
     initial_guess = np.array([L, P_c, R, T_c])
     print("Initial guess: L=", initial_guess[0]/const.Ls, "L_sun, P_c=", initial_guess[1], "dyn/cm^2, R=", initial_guess[2]/const.Rs, "R_sun, T_c=", initial_guess[3], "K")
 
-    #Set up things for plotting and reading in MESA calculation of same star
-    ylabels = [r'$L/L_\odot$', r'$P$ (dyn/cm$^2$)', r'$R/R_\odot$', r'$T$ (K)']
-    mesapath = './mesa_zams/LOGS/'
-    mesafile = '1_0_Msun_Z_0_02.data'
-
     #Run optimization to find best initial parameters
-    print("Running optimizer to find best initial parameters")
+    print("Running optimizer to find best initial parameters (this can take a few minutes!)")
     sol = optimize.root(newt, initial_guess, args=(M_r, M, X, Y, Z, xf, n_steps), tol=1e-3)
     print(sol)
     final_solution = sol.x
@@ -256,17 +271,14 @@ if __name__ == "__main__":
     inward_guess_result = initial_guess_result[1]
     
     #Plot results for the final stellar structure calculation, comparing it with the initial guess and the MESA result for the same star
+    print("Plotting results...")
     plotter(outward_result, inward_result, ylabels, initial_guess = [outward_guess_result, inward_guess_result], showplot=True)
     plotter(outward_result, inward_result, ylabels, showplot=True)
     mesa_plotter(mesapath, mesafile, ylabels, calc=[outward_result, inward_result], showplot=True)
     mesa_plotter(mesapath, mesafile, ylabels, showplot=True)
 
     #Write data to a table
-    write_tocsv(outward_result, inward_result, X, Y, Z, show_table=True)
+    print("Writing converged model output to table. Access it as stellar_structure_calculation_result.csv")
+    write_tocsv(outward_result, inward_result, X, Y, Z, show_table=False)
 
     print("Stellar structure calculation is done!")
-
-    
-
-
-

@@ -13,14 +13,7 @@ def energy_gen_ppchain(rho, T, X, Y, Z):
     g11 = 1 + 3.82*T9 + 1.51*T9**2 + 0.144*T9**3 - 0.0114*T9**4
     f11 = np.exp(5.92e-3 * (rho / T7**3)**0.5) #weak screening
     psi = 1 #just use 1
-
-    #if 1.5 >= T7:
-    #   psi = 1
-    #if (1.5 < T7) and (2.5 > T7):
-    #    psi = 2
-    #if 2.5 <= T7:
-    #    psi = 1.5
-
+    
     e_pp = 2.57e4 * psi * f11 * g11 * rho * X**2 * T9**(-2/3) * np.exp(-3.381/T9**(1/3))
     return(e_pp)
 
